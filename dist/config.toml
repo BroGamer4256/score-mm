@@ -1,0 +1,15 @@
+enabled = true
+dll = ["score.dll"]
+
+name = "Judgement Line"
+version = "1.00"
+date = 1970-01-01
+author = "BroGamer"
+
+# Extreme, Normal, Easy
+safeColour = { r = 252, g = 54, b = 110, a = 184 }
+fineColour = { r = 0, g = 251, b = 55, a = 184 }
+coolColour = { r = 94, g = 251, b = 251, a = 184 }
+# Extreme, Hard, Normal
+# fineColour = { r = 252, g = 209, b = 0, a = 184 }
+# coolColour = { r = 0, g = 251, b = 55, a = 184 }

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <toml.h>
 #include <windows.h>
 
 typedef int8_t i8;
@@ -105,4 +106,9 @@ typedef uint64_t u64;
 	printColour (WARNING_COLOUR, format, __VA_ARGS__)
 #define printError(format, ...) printColour (ERROR_COLOUR, format, __VA_ARGS__)
 
+toml_table_t *openConfig (char *configFilePath);
+toml_table_t *openConfigSection (toml_table_t *config, char *sectionName);
+bool readConfigBool (toml_table_t *table, char *key, bool notFoundValue);
+int64_t readConfigInt (toml_table_t *table, char *key, int64_t notFoundValue);
+char *readConfigString (toml_table_t *table, char *key, char *notFoundValue);
 void printColour (int colour, const char *format, ...);

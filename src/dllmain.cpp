@@ -49,8 +49,8 @@ typedef enum : i32 {
 	NA = 21,
 } hitState;
 
-float timings[100];
-hitState ratings[100];
+float timings[40];
+hitState ratings[40];
 
 i32 cools = 0;
 i32 fines = 0;
@@ -59,6 +59,11 @@ i32 bads = 0;
 i32 wrongs = 0;
 i32 misses = 0;
 i32 timingIndex = 0;
+
+ImColor safeColour = ImColor (252, 54, 110, 184);
+ImColor fineColour = ImColor (0, 251, 55, 184);
+ImColor coolColour = ImColor (94, 241, 251, 184);
+
 HOOK (hitState, __stdcall, CheckHitState, sigHitState (), void *a1, void *a2,
 	  u16 a3, u16 a4) {
 	hitState result = originalCheckHitState (a1, a2, a3, a4);
@@ -125,6 +130,33 @@ __declspec(dllexport) void init () {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
 	}
+	toml_table_t *config = openConfig("config.toml");
+	if (!config) return;
+	toml_table_t *safeColourSection = openConfigSection(config, "safeColour");
+	int r,g,b,a = 0;
+	if (safeColourSection) {
+		r = readConfigInt(safeColourSection, "r", 252);
+		g = readConfigInt(safeColourSection, "g", 54);
+		b = readConfigInt(safeColourSection, "b", 110);
+		a = readConfigInt(safeColourSection, "a", 184);
+		safeColour = ImColor(r,g,b,a);
+	}
+	toml_table_t *fineColourSection = openConfigSection(config, "fineColour");
+	if (fineColourSection) {
+		r = readConfigInt(fineColourSection, "r", 0);
+		g = readConfigInt(fineColourSection, "g", 251);
+		b = readConfigInt(fineColourSection, "b", 55);
+		a = readConfigInt(fineColourSection, "a", 184);
+		fineColour = ImColor(r,g,b,a);
+	}
+	toml_table_t *coolColourSection = openConfigSection(config, "coolColour");
+	if (coolColourSection) {
+		r = readConfigInt(coolColourSection, "r", 94);
+		g = readConfigInt(coolColourSection, "g", 241);
+		b = readConfigInt(coolColourSection, "b", 251);
+		a = readConfigInt(coolColourSection, "a", 184);
+		coolColour = ImColor(r,g,b,a);
+	}
 }
 
 __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
@@ -180,7 +212,7 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	float endX = startX + (max.x - 16.0f);
 	float endY = startY + (max.y - 36.0f);
 
-	float horizontalStartY = startY + (max.y - 36.0f) / 4.0f;
+	float horizontalStartY = startY + (max.y - 36.0f) / 3.0f;
 	float horizontalEndY = horizontalStartY + (max.y - 36.0f) / 2.0f;
 
 	float blueStartX
@@ -195,17 +227,13 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 
 	draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
 							  ImVec2 (endX, horizontalEndY),
-							  ImColor (200, 0, 0, 255));
+							  safeColour);
 	draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY),
 							  ImVec2 (blueEndX, horizontalEndY),
-							  ImColor (0, 0, 200, 255));
+							  fineColour);
 	draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY),
 							  ImVec2 (greenEndX, horizontalEndY),
-							  ImColor (0, 200, 0, 255));
-
-	ImColor red = ImColor (255, 0, 0, 255);
-	ImColor green = ImColor (0, 255, 0, 255);
-	ImColor blue = ImColor (0, 0, 255, 255);
+							  coolColour);
 
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
 		if (timings[i] > 0.15f)
@@ -216,16 +244,16 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 		ImColor colour;
 		switch (ratings[i]) {
 		case Cool:
-			colour = green;
+			colour = coolColour;
 			break;
 		case Fine:
-			colour = blue;
+			colour = fineColour;
 			break;
 		case Safe:
-			colour = red;
+			colour = safeColour;
 			break;
 		default:
-			colour = red;
+			colour = safeColour;
 		}
 		draw_list->AddLine (ImVec2 (position, startY), ImVec2 (position, endY),
 							colour);
