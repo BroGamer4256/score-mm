@@ -130,39 +130,41 @@ __declspec(dllexport) void init () {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
 	}
-	toml_table_t *config = openConfig("config.toml");
-	if (!config) return;
-	toml_table_t *safeColourSection = openConfigSection(config, "safeColour");
-	int r,g,b,a = 0;
+	toml_table_t *config = openConfig ("config.toml");
+	if (!config)
+		return;
+	toml_table_t *safeColourSection = openConfigSection (config, "safeColour");
+	int r, g, b, a = 0;
 	if (safeColourSection) {
-		r = readConfigInt(safeColourSection, "r", 252);
-		g = readConfigInt(safeColourSection, "g", 54);
-		b = readConfigInt(safeColourSection, "b", 110);
-		a = readConfigInt(safeColourSection, "a", 184);
-		safeColour = ImColor(r,g,b,a);
+		r = readConfigInt (safeColourSection, "r", 252);
+		g = readConfigInt (safeColourSection, "g", 54);
+		b = readConfigInt (safeColourSection, "b", 110);
+		a = readConfigInt (safeColourSection, "a", 184);
+		safeColour = ImColor (r, g, b, a);
 	}
-	toml_table_t *fineColourSection = openConfigSection(config, "fineColour");
+	toml_table_t *fineColourSection = openConfigSection (config, "fineColour");
 	if (fineColourSection) {
-		r = readConfigInt(fineColourSection, "r", 0);
-		g = readConfigInt(fineColourSection, "g", 251);
-		b = readConfigInt(fineColourSection, "b", 55);
-		a = readConfigInt(fineColourSection, "a", 184);
-		fineColour = ImColor(r,g,b,a);
+		r = readConfigInt (fineColourSection, "r", 0);
+		g = readConfigInt (fineColourSection, "g", 251);
+		b = readConfigInt (fineColourSection, "b", 55);
+		a = readConfigInt (fineColourSection, "a", 184);
+		fineColour = ImColor (r, g, b, a);
 	}
-	toml_table_t *coolColourSection = openConfigSection(config, "coolColour");
+	toml_table_t *coolColourSection = openConfigSection (config, "coolColour");
 	if (coolColourSection) {
-		r = readConfigInt(coolColourSection, "r", 94);
-		g = readConfigInt(coolColourSection, "g", 241);
-		b = readConfigInt(coolColourSection, "b", 251);
-		a = readConfigInt(coolColourSection, "a", 184);
-		coolColour = ImColor(r,g,b,a);
+		r = readConfigInt (coolColourSection, "r", 94);
+		g = readConfigInt (coolColourSection, "g", 241);
+		b = readConfigInt (coolColourSection, "b", 251);
+		a = readConfigInt (coolColourSection, "a", 184);
+		coolColour = ImColor (r, g, b, a);
 	}
 }
 
 __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	static bool inited = false;
 	static bool locked = false;
-	static u64 original = 0;
+	//static bool colourPickerOpen = false;
+	//static int colourPickerSelected = 0;
 	if (!inited) {
 		ID3D11Device *pDevice;
 		DXGI_SWAP_CHAIN_DESC sd;
@@ -185,17 +187,6 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 		ImGui_ImplDX11_Init (pDevice, pContext);
 
 		inited = true;
-	}
-
-	if (ImGui::GetIO ().WantCaptureKeyboard && !locked) {
-		original = *(u64 *)PROC_ADDRESS ("user32.dll", "GetAsyncKeyState");
-		WRITE_MEMORY (PROC_ADDRESS ("user32.dll", "GetAsyncKeyState"), u8,
-					  0x66, 0x31, 0xC0, 0xC3); // xor ax, ax; ret
-		locked = true;
-	} else if (!ImGui::GetIO ().WantCaptureKeyboard && locked) {
-		WRITE_MEMORY (PROC_ADDRESS ("user32.dll", "GetAsyncKeyState"), u64,
-					  original);
-		locked = false;
 	}
 
 	ImGui_ImplDX11_NewFrame ();
@@ -226,14 +217,11 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 		= sensibleToWindow (weirdnessToSensible (-0.03f), startX, endX);
 
 	draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
-							  ImVec2 (endX, horizontalEndY),
-							  safeColour);
+							  ImVec2 (endX, horizontalEndY), safeColour);
 	draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY),
-							  ImVec2 (blueEndX, horizontalEndY),
-							  fineColour);
+							  ImVec2 (blueEndX, horizontalEndY), fineColour);
 	draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY),
-							  ImVec2 (greenEndX, horizontalEndY),
-							  coolColour);
+							  ImVec2 (greenEndX, horizontalEndY), coolColour);
 
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
 		if (timings[i] > 0.15f)
@@ -280,6 +268,29 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 			ratings[i] = NA;
 		}
 	}
+	/*
+	ImGui::Checkbox ("Show Colour Picker", &colourPickerOpen);
+	if (colourPickerOpen) {
+		if (ImGui::RadioButton ("Safe", &colourPickerSelected, 0) ||
+	colourPickerSelected == 0) { ImGui::Begin("ColourPicker", 0, 0);
+			ImGui::ColorPicker4("Safe##ColourPicker", (float
+	*)&safeColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+	ImGuiColorEditFlags_NoTooltip); ImGui::End();
+		}
+		if (ImGui::RadioButton ("Fine", &colourPickerSelected, 1) ||
+	colourPickerSelected == 1) { ImGui::Begin("ColourPicker", 0, 0);
+			ImGui::ColorPicker4("Fine##ColourPicker", (float
+	*)&fineColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+	ImGuiColorEditFlags_NoTooltip); ImGui::End();
+		}
+		if (ImGui::RadioButton ("Cool", &colourPickerSelected, 2) ||
+	colourPickerSelected == 2) { ImGui::Begin("ColourPicker", 0, 0);
+			ImGui::ColorPicker4("Cool##ColourPicker", (float
+	*)&coolColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+	ImGuiColorEditFlags_NoTooltip); ImGui::End();
+		}
+	}
+	*/
 	ImGui::End ();
 
 	ImGui::EndFrame ();
