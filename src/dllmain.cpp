@@ -6,6 +6,7 @@
 #include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
 #include <iostream>
+#include <vector>
 
 SIG_SCAN (sigHitState, 0x14026D3D0, "\x66\x44\x89\x4C\x24\x00\x53", "xxxxx?x");
 
@@ -49,6 +50,12 @@ typedef enum : i32 {
 	NA = 21,
 } hitState;
 
+typedef struct {
+	int early = 0;
+	int late = 0;
+	float mean = 0;
+} stats_t;
+
 float timings[40];
 hitState ratings[40];
 
@@ -59,6 +66,11 @@ i32 bads = 0;
 i32 wrongs = 0;
 i32 misses = 0;
 i32 timingIndex = 0;
+
+stats_t computeStats();
+
+std::vector<float> hits;
+stats_t totalStats;
 
 ImColor safeColour = ImColor (252, 54, 110, 184);
 ImColor fineColour = ImColor (0, 251, 55, 184);
@@ -93,14 +105,18 @@ HOOK (hitState, __stdcall, CheckHitState, sigHitState (), void *a1, void *a2,
 		break;
 	}
 	if (result >= Bad)
-		return result;
+		return result;	
 
 	timings[timingIndex]
 		= *(float *)((u64)a2 + 0x18) - *(float *)((u64)a1 + 0x13264);
 	ratings[timingIndex] = result;
+	hits.push_back(timings[timingIndex]);
 	timingIndex++;
 	if (timingIndex >= COUNTOFARR (timings) - 1)
 		timingIndex = 0;
+
+	totalStats = computeStats();
+
 	return result;
 }
 
@@ -121,6 +137,32 @@ sensibleToWindow (float sensible, float min, float max) {
 	return scaled + min;
 }
 
+stats_t
+computeStats () {
+	stats_t s;
+
+	if (hits.size() == 0) return s;
+
+	u32 early = 0;
+	u32 late = 0;
+
+	for (auto &timing : hits) {
+		if (timing > 0)
+			early++;
+		else
+			late++;
+
+		s.mean += timing;
+	}
+
+	s.mean /= hits.size();
+	s.early = early;
+	s.late = late;
+
+	return s;
+}
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -130,6 +172,9 @@ __declspec(dllexport) void init () {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
 	}
+
+	hits = std::vector<float>();
+
 	toml_table_t *config = openConfig ("config.toml");
 	if (!config)
 		return;
@@ -191,6 +236,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui_ImplDX11_NewFrame ();
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();
+
+	// Judgement Line
 
 	ImGui::SetNextWindowSize (ImVec2(700,70), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
@@ -260,6 +307,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 
 	ImGui::End ();
 
+	// Scores
+
 	ImGui::SetNextWindowSize (ImVec2(110,160), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
 	ImGui::Begin ("Scores", 0, 0);
@@ -280,6 +329,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 			timings[i] = 1.0f;
 			ratings[i] = NA;
 		}
+		hits.clear();
+		totalStats = computeStats();
 	}
 	/*
 	ImGui::Checkbox ("Show Colour Picker", &colourPickerOpen);
@@ -305,6 +356,17 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	}
 	*/
 	ImGui::End ();
+
+	// Timing
+
+	ImGui::Begin("Timing", 0, 0);
+
+	ImGui::Text("Early: %d", totalStats.early);
+	ImGui::Text("Late: %d", totalStats.late);
+	ImGui::Text("Average Offset: %.2f ms", -totalStats.mean * 1000);	
+
+	ImGui::End();
+
 
 	ImGui::EndFrame ();
 	ImGui::Render ();
