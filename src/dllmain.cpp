@@ -192,6 +192,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();
 
+	ImGui::SetNextWindowSize (ImVec2(700,70), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
 	ImGui::Begin ("Judgement Line", 0, 0);
 
 	ImDrawList *draw_list = ImGui::GetWindowDrawList ();
@@ -258,6 +260,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 
 	ImGui::End ();
 
+	ImGui::SetNextWindowSize (ImVec2(110,160), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
 	ImGui::Begin ("Scores", 0, 0);
 	ImGui::Text ("Cool: %d", cools);
 	ImGui::Text ("Fine: %d", fines);
