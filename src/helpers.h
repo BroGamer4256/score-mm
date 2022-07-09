@@ -25,7 +25,7 @@ typedef uint64_t u64;
 #define HOOK(returnType, callingConvention, functionName, location, ...)      \
 	typedef returnType callingConvention (*functionName) (__VA_ARGS__);       \
 	functionName original##functionName = NULL;                               \
-	void *where##functionName = (void *)location;                             \
+	void *where##functionName = (void *)(location);                           \
 	returnType callingConvention implOf##functionName (__VA_ARGS__)
 
 #define HOOK_DYNAMIC(returnType, callingConvention, functionName, ...)        \

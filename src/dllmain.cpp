@@ -7,7 +7,10 @@
 #include <imgui_impl_win32.h>
 #include <iostream>
 
-SIG_SCAN (sigHitState, 0x14026D3D0, "\x66\x44\x89\x4C\x24\x00\x53", "xxxxx?x");
+SIG_SCAN (sigHitState, 0x14026BC3C,
+		  "\xE8\x00\x00\x00\x00\x48\x8B\x4D\xE8\x89\x01", "x????xxxxxx");
+SIG_SCAN (sigHitStateInternal, 0x14026D3D0, "\x66\x44\x89\x4C\x24\x00\x53",
+		  "xxxxx?x");
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler (HWND hWnd, UINT msg,
 											   WPARAM wParam, LPARAM lParam);
@@ -52,6 +55,7 @@ typedef enum : i32 {
 float timings[40];
 hitState ratings[40];
 
+float lastTiming = 0.0f;
 i32 cools = 0;
 i32 fines = 0;
 i32 safes = 0;
@@ -64,9 +68,17 @@ ImColor safeColour = ImColor (252, 54, 110, 184);
 ImColor fineColour = ImColor (0, 251, 55, 184);
 ImColor coolColour = ImColor (94, 241, 251, 184);
 
-HOOK (hitState, __stdcall, CheckHitState, sigHitState (), void *a1, void *a2,
-	  u16 a3, u16 a4) {
-	hitState result = originalCheckHitState (a1, a2, a3, a4);
+HOOK (hitState, __stdcall, CheckHitState,
+	  (u64)sigHitState () + *(i32 *)((u64)sigHitState () + 1) + 5, void *a1,
+	  bool *a2, void *a3, void *a4, i32 a5, void *a6, u32 *multiCount, u32 *a8,
+	  i32 *a9, bool *a10, bool *slide, bool *slide_chain,
+	  bool *slide_chain_start, bool *slide_chain_max,
+	  bool *slide_chain_continues) {
+	hitState result = originalCheckHitState (
+		a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain,
+		slide_chain_start, slide_chain_max, slide_chain_continues);
+	if (*slide_chain_continues)
+		return result;
 	switch (result) {
 	case Cool:
 		cools++;
@@ -95,12 +107,20 @@ HOOK (hitState, __stdcall, CheckHitState, sigHitState (), void *a1, void *a2,
 	if (result >= Bad)
 		return result;
 
-	timings[timingIndex]
-		= *(float *)((u64)a2 + 0x18) - *(float *)((u64)a1 + 0x13264);
+	timings[timingIndex] = lastTiming;
 	ratings[timingIndex] = result;
 	timingIndex++;
 	if (timingIndex >= COUNTOFARR (timings) - 1)
 		timingIndex = 0;
+	return result;
+}
+
+HOOK (hitState, __stdcall, CheckHitStateInternal, sigHitStateInternal (),
+	  void *a1, void *a2, u16 a3, u16 a4) {
+	hitState result = originalCheckHitStateInternal (a1, a2, a3, a4);
+	if (result >= Bad)
+		return result;
+	lastTiming = *(float *)((u64)a2 + 0x18) - *(float *)((u64)a1 + 0x13264);
 	return result;
 }
 
@@ -119,6 +139,7 @@ extern "C" {
 #endif
 __declspec(dllexport) void init () {
 	INSTALL_HOOK (CheckHitState);
+	INSTALL_HOOK (CheckHitStateInternal);
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
@@ -190,108 +211,113 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 
 	ImGui::SetNextWindowSize (ImVec2 (700, 70), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos (ImVec2 (0, 0), ImGuiCond_FirstUseEver);
-	ImGui::Begin ("Judgement Line", 0, 0);
+	if (ImGui::Begin ("Judgement Line", 0, 0)) {
 
-	ImDrawList *draw_list = ImGui::GetWindowDrawList ();
-	ImVec2 p = ImGui::GetCursorScreenPos ();
-	float startX = p.x + 4.0f;
-	float startY = p.y + 4.0f;
-	ImVec2 max = ImGui::GetWindowContentRegionMax ();
-	float endX = startX + (max.x - 16.0f);
-	float endY = startY + (max.y - 36.0f);
+		ImDrawList *draw_list = ImGui::GetWindowDrawList ();
+		ImVec2 p = ImGui::GetCursorScreenPos ();
+		float startX = p.x + 4.0f;
+		float startY = p.y + 4.0f;
+		ImVec2 max = ImGui::GetWindowContentRegionMax ();
+		float endX = startX + (max.x - 16.0f);
+		float endY = startY + (max.y - 36.0f);
 
-	float horizontalStartY = startY + (max.y - 36.0f) / 3.0f;
-	float horizontalEndY = horizontalStartY + (max.y - 36.0f) / 2.0f;
+		float horizontalStartY = startY + (max.y - 36.0f) / 3.0f;
+		float horizontalEndY = horizontalStartY + (max.y - 36.0f) / 2.0f;
 
-	float blueStartX = weirdnessToWindow (0.07f, startX, endX);
-	float blueEndX = weirdnessToWindow (-0.07f, startX, endX);
+		float blueStartX = weirdnessToWindow (0.07f, startX, endX);
+		float blueEndX = weirdnessToWindow (-0.07f, startX, endX);
 
-	float greenStartX = weirdnessToWindow (0.03f, startX, endX);
-	float greenEndX = weirdnessToWindow (-0.03f, startX, endX);
+		float greenStartX = weirdnessToWindow (0.03f, startX, endX);
+		float greenEndX = weirdnessToWindow (-0.03f, startX, endX);
 
-	float middleX = weirdnessToWindow (0.0f, startX, endX);
-	float leftOffMiddleX = weirdnessToWindow (0.0025f, startX, endX);
-	float rightOffMiddleX = weirdnessToWindow (-0.0025f, startX, endX);
+		float middleX = weirdnessToWindow (0.0f, startX, endX);
+		float leftOffMiddleX = weirdnessToWindow (0.0025f, startX, endX);
+		float rightOffMiddleX = weirdnessToWindow (-0.0025f, startX, endX);
 
-	draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
-							  ImVec2 (endX, horizontalEndY), safeColour);
-	draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY),
-							  ImVec2 (blueEndX, horizontalEndY), fineColour);
-	draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY),
-							  ImVec2 (greenEndX, horizontalEndY), coolColour);
-	draw_list->AddTriangleFilled (
-		ImVec2 (leftOffMiddleX, startY), ImVec2 (rightOffMiddleX, startY),
-		ImVec2 (middleX, horizontalStartY), ImColor (255, 255, 255, 255));
+		draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
+								  ImVec2 (endX, horizontalEndY), safeColour);
+		draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY),
+								  ImVec2 (blueEndX, horizontalEndY),
+								  fineColour);
+		draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY),
+								  ImVec2 (greenEndX, horizontalEndY),
+								  coolColour);
 
-	for (int i = 0; i < COUNTOFARR (timings); i++) {
-		if (timings[i] > 0.15f)
-			continue;
+		for (int i = 0; i < COUNTOFARR (timings); i++) {
+			if (timings[i] > 0.15f)
+				continue;
 
-		float position = weirdnessToWindow (timings[i], startX, endX);
-		ImColor colour;
-		switch (ratings[i]) {
-		case Cool:
-			colour = coolColour;
-			break;
-		case Fine:
-			colour = fineColour;
-			break;
-		case Safe:
-			colour = safeColour;
-			break;
-		default:
-			colour = safeColour;
+			float position = weirdnessToWindow (timings[i], startX, endX);
+			ImColor colour;
+			switch (ratings[i]) {
+			case Cool:
+				colour = coolColour;
+				break;
+			case Fine:
+				colour = fineColour;
+				break;
+			case Safe:
+				colour = safeColour;
+				break;
+			default:
+				colour = safeColour;
+			}
+			draw_list->AddLine (ImVec2 (position, startY),
+								ImVec2 (position, endY), colour);
 		}
-		draw_list->AddLine (ImVec2 (position, startY), ImVec2 (position, endY),
-							colour);
+
+		draw_list->AddTriangleFilled (
+			ImVec2 (leftOffMiddleX, startY), ImVec2 (rightOffMiddleX, startY),
+			ImVec2 (middleX, horizontalStartY), ImColor (255, 255, 255, 255));
 	}
 
 	ImGui::End ();
 
 	ImGui::SetNextWindowSize (ImVec2 (110, 160), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos (ImVec2 (0, 0), ImGuiCond_FirstUseEver);
-	ImGui::Begin ("Scores", 0, 0);
-	ImGui::Text ("Cool: %d", cools);
-	ImGui::Text ("Fine: %d", fines);
-	ImGui::Text ("Safe: %d", safes);
-	ImGui::Text ("Bad: %d", bads);
-	ImGui::Text ("Wrong: %d", wrongs);
-	ImGui::Text ("Miss: %d", misses);
-	if (ImGui::Button ("Reset")) {
-		cools = 0;
-		fines = 0;
-		safes = 0;
-		bads = 0;
-		wrongs = 0;
-		misses = 0;
-		for (int i = 0; i < COUNTOFARR (timings); i++) {
-			timings[i] = 1.0f;
-			ratings[i] = NA;
+	if (ImGui::Begin ("Scores", 0, 0)) {
+		ImGui::Text ("Cool: %d", cools);
+		ImGui::Text ("Fine: %d", fines);
+		ImGui::Text ("Safe: %d", safes);
+		ImGui::Text ("Bad: %d", bads);
+		ImGui::Text ("Wrong: %d", wrongs);
+		ImGui::Text ("Miss: %d", misses);
+		if (ImGui::Button ("Reset")) {
+			cools = 0;
+			fines = 0;
+			safes = 0;
+			bads = 0;
+			wrongs = 0;
+			misses = 0;
+			for (int i = 0; i < COUNTOFARR (timings); i++) {
+				timings[i] = 1.0f;
+				ratings[i] = NA;
+			}
 		}
+		/*
+		ImGui::Checkbox ("Show Colour Picker", &colourPickerOpen);
+		if (colourPickerOpen) {
+			if (ImGui::RadioButton ("Safe", &colourPickerSelected, 0) ||
+		colourPickerSelected == 0) { ImGui::Begin("ColourPicker", 0, 0);
+				ImGui::ColorPicker4("Safe##ColourPicker", (float
+		*)&safeColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+		ImGuiColorEditFlags_NoTooltip); ImGui::End();
+			}
+			if (ImGui::RadioButton ("Fine", &colourPickerSelected, 1) ||
+		colourPickerSelected == 1) { ImGui::Begin("ColourPicker", 0, 0);
+				ImGui::ColorPicker4("Fine##ColourPicker", (float
+		*)&fineColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+		ImGuiColorEditFlags_NoTooltip); ImGui::End();
+			}
+			if (ImGui::RadioButton ("Cool", &colourPickerSelected, 2) ||
+		colourPickerSelected == 2) { ImGui::Begin("ColourPicker", 0, 0);
+				ImGui::ColorPicker4("Cool##ColourPicker", (float
+		*)&coolColour.Value, ImGuiColorEditFlags_NoSmallPreview |
+		ImGuiColorEditFlags_NoTooltip); ImGui::End();
+			}
+		}
+		*/
 	}
-	/*
-	ImGui::Checkbox ("Show Colour Picker", &colourPickerOpen);
-	if (colourPickerOpen) {
-		if (ImGui::RadioButton ("Safe", &colourPickerSelected, 0) ||
-	colourPickerSelected == 0) { ImGui::Begin("ColourPicker", 0, 0);
-			ImGui::ColorPicker4("Safe##ColourPicker", (float
-	*)&safeColour.Value, ImGuiColorEditFlags_NoSmallPreview |
-	ImGuiColorEditFlags_NoTooltip); ImGui::End();
-		}
-		if (ImGui::RadioButton ("Fine", &colourPickerSelected, 1) ||
-	colourPickerSelected == 1) { ImGui::Begin("ColourPicker", 0, 0);
-			ImGui::ColorPicker4("Fine##ColourPicker", (float
-	*)&fineColour.Value, ImGuiColorEditFlags_NoSmallPreview |
-	ImGuiColorEditFlags_NoTooltip); ImGui::End();
-		}
-		if (ImGui::RadioButton ("Cool", &colourPickerSelected, 2) ||
-	colourPickerSelected == 2) { ImGui::Begin("ColourPicker", 0, 0);
-			ImGui::ColorPicker4("Cool##ColourPicker", (float
-	*)&coolColour.Value, ImGuiColorEditFlags_NoSmallPreview |
-	ImGuiColorEditFlags_NoTooltip); ImGui::End();
-		}
-	}
-	*/
 	ImGui::End ();
 
 	ImGui::EndFrame ();
