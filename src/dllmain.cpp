@@ -162,9 +162,8 @@ __declspec(dllexport) void init () {
 
 __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	static bool inited = false;
-	static bool locked = false;
-	//static bool colourPickerOpen = false;
-	//static int colourPickerSelected = 0;
+	// static bool colourPickerOpen = false;
+	// static int colourPickerSelected = 0;
 	if (!inited) {
 		ID3D11Device *pDevice;
 		DXGI_SWAP_CHAIN_DESC sd;
@@ -216,12 +215,22 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	float greenEndX
 		= sensibleToWindow (weirdnessToSensible (-0.03f), startX, endX);
 
+	float middleX
+		= sensibleToWindow (weirdnessToSensible (0.0f), startX, endX);
+	float leftOffMiddleX
+		= sensibleToWindow (weirdnessToSensible (0.0025f), startX, endX);
+	float rightOffMiddleX
+		= sensibleToWindow (weirdnessToSensible (-0.0025f), startX, endX);
+
 	draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
 							  ImVec2 (endX, horizontalEndY), safeColour);
 	draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY),
 							  ImVec2 (blueEndX, horizontalEndY), fineColour);
 	draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY),
 							  ImVec2 (greenEndX, horizontalEndY), coolColour);
+	draw_list->AddTriangleFilled (
+		ImVec2 (leftOffMiddleX, startY), ImVec2 (rightOffMiddleX, startY),
+		ImVec2 (middleX, horizontalStartY), ImColor (255, 255, 255, 255));
 
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
 		if (timings[i] > 0.15f)
