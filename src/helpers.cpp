@@ -77,3 +77,9 @@ printColour (int colour, const char *format, ...) {
 
 	va_end (args);
 }
+
+u32
+readUnalignedU32 (void *memory) {
+	u8 *p = (u8 *)memory;
+	return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+}

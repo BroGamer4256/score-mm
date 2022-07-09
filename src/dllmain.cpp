@@ -69,10 +69,11 @@ ImColor fineColour = ImColor (0, 251, 55, 184);
 ImColor coolColour = ImColor (94, 241, 251, 184);
 
 HOOK (hitState, __stdcall, CheckHitState,
-	  (u64)sigHitState () + *(i32 *)((u64)sigHitState () + 1) + 5, void *a1,
-	  bool *a2, void *a3, void *a4, i32 a5, void *a6, u32 *multiCount, u32 *a8,
-	  i32 *a9, bool *a10, bool *slide, bool *slide_chain,
-	  bool *slide_chain_start, bool *slide_chain_max,
+	  (u64)sigHitState ()
+		  + readUnalignedU32 ((void *)((u64)sigHitState () + 1)) + 5,
+	  void *a1, bool *a2, void *a3, void *a4, i32 a5, void *a6,
+	  u32 *multiCount, u32 *a8, i32 *a9, bool *a10, bool *slide,
+	  bool *slide_chain, bool *slide_chain_start, bool *slide_chain_max,
 	  bool *slide_chain_continues) {
 	hitState result = originalCheckHitState (
 		a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain,

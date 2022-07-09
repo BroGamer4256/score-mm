@@ -112,3 +112,4 @@ bool readConfigBool (toml_table_t *table, char *key, bool notFoundValue);
 int64_t readConfigInt (toml_table_t *table, char *key, int64_t notFoundValue);
 char *readConfigString (toml_table_t *table, char *key, char *notFoundValue);
 void printColour (int colour, const char *format, ...);
+u32 readUnalignedU32 (void *memory);
