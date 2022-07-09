@@ -25,11 +25,11 @@ dirs:
 
 ${TARGET}/%.o: %.cpp
 	@echo BUILD $@
-	@${CXX} -c ${CXXFLAGS} $< -o $@
+	@bear -- ${CXX} -c ${CXXFLAGS} $< -o $@
 
 ${TARGET}/%.o: %.c
 	@echo BUILD $@
-	@${CC} -c ${CFLAGS} $< -o $@
+	@bear -- ${CC} -c ${CFLAGS} $< -o $@
 
 .PHONY: ${OUT}
 ${OUT}: dirs ${OBJ}

@@ -104,18 +104,11 @@ HOOK (hitState, __stdcall, CheckHitState, sigHitState (), void *a1, void *a2,
 	return result;
 }
 
-// Timing can be between 0.10 for the lowest and -0.10 for the highest
-// Returns 0 to 1 scale
 float
-weirdnessToSensible (float weird) {
-	float sensible = weird * -1.0f;
+weirdnessToWindow (float weirdness, float min, float max) {
+	float sensible = weirdness * -1.0f;
 	sensible += 0.10;
 	sensible *= 5;
-	return sensible;
-}
-
-float
-sensibleToWindow (float sensible, float min, float max) {
 	float difference = max - min;
 	float scaled = sensible * difference;
 	return scaled + min;
@@ -130,32 +123,35 @@ __declspec(dllexport) void init () {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
 	}
-	toml_table_t *config = openConfig ("config.toml");
+	toml_table_t *config = openConfig ((char *)"config.toml");
 	if (!config)
 		return;
-	toml_table_t *safeColourSection = openConfigSection (config, "safeColour");
+	toml_table_t *safeColourSection
+		= openConfigSection (config, (char *)"safeColour");
 	int r, g, b, a = 0;
 	if (safeColourSection) {
-		r = readConfigInt (safeColourSection, "r", 252);
-		g = readConfigInt (safeColourSection, "g", 54);
-		b = readConfigInt (safeColourSection, "b", 110);
-		a = readConfigInt (safeColourSection, "a", 184);
+		r = readConfigInt (safeColourSection, (char *)"r", 252);
+		g = readConfigInt (safeColourSection, (char *)"g", 54);
+		b = readConfigInt (safeColourSection, (char *)"b", 110);
+		a = readConfigInt (safeColourSection, (char *)"a", 184);
 		safeColour = ImColor (r, g, b, a);
 	}
-	toml_table_t *fineColourSection = openConfigSection (config, "fineColour");
+	toml_table_t *fineColourSection
+		= openConfigSection (config, (char *)"fineColour");
 	if (fineColourSection) {
-		r = readConfigInt (fineColourSection, "r", 0);
-		g = readConfigInt (fineColourSection, "g", 251);
-		b = readConfigInt (fineColourSection, "b", 55);
-		a = readConfigInt (fineColourSection, "a", 184);
+		r = readConfigInt (fineColourSection, (char *)"r", 0);
+		g = readConfigInt (fineColourSection, (char *)"g", 251);
+		b = readConfigInt (fineColourSection, (char *)"b", 55);
+		a = readConfigInt (fineColourSection, (char *)"a", 184);
 		fineColour = ImColor (r, g, b, a);
 	}
-	toml_table_t *coolColourSection = openConfigSection (config, "coolColour");
+	toml_table_t *coolColourSection
+		= openConfigSection (config, (char *)"coolColour");
 	if (coolColourSection) {
-		r = readConfigInt (coolColourSection, "r", 94);
-		g = readConfigInt (coolColourSection, "g", 241);
-		b = readConfigInt (coolColourSection, "b", 251);
-		a = readConfigInt (coolColourSection, "a", 184);
+		r = readConfigInt (coolColourSection, (char *)"r", 94);
+		g = readConfigInt (coolColourSection, (char *)"g", 241);
+		b = readConfigInt (coolColourSection, (char *)"b", 251);
+		a = readConfigInt (coolColourSection, (char *)"a", 184);
 		coolColour = ImColor (r, g, b, a);
 	}
 }
@@ -192,8 +188,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();
 
-	ImGui::SetNextWindowSize (ImVec2(700,70), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize (ImVec2 (700, 70), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos (ImVec2 (0, 0), ImGuiCond_FirstUseEver);
 	ImGui::Begin ("Judgement Line", 0, 0);
 
 	ImDrawList *draw_list = ImGui::GetWindowDrawList ();
@@ -207,22 +203,15 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	float horizontalStartY = startY + (max.y - 36.0f) / 3.0f;
 	float horizontalEndY = horizontalStartY + (max.y - 36.0f) / 2.0f;
 
-	float blueStartX
-		= sensibleToWindow (weirdnessToSensible (0.07f), startX, endX);
-	float blueEndX
-		= sensibleToWindow (weirdnessToSensible (-0.07f), startX, endX);
+	float blueStartX = weirdnessToWindow (0.07f, startX, endX);
+	float blueEndX = weirdnessToWindow (-0.07f, startX, endX);
 
-	float greenStartX
-		= sensibleToWindow (weirdnessToSensible (0.03f), startX, endX);
-	float greenEndX
-		= sensibleToWindow (weirdnessToSensible (-0.03f), startX, endX);
+	float greenStartX = weirdnessToWindow (0.03f, startX, endX);
+	float greenEndX = weirdnessToWindow (-0.03f, startX, endX);
 
-	float middleX
-		= sensibleToWindow (weirdnessToSensible (0.0f), startX, endX);
-	float leftOffMiddleX
-		= sensibleToWindow (weirdnessToSensible (0.0025f), startX, endX);
-	float rightOffMiddleX
-		= sensibleToWindow (weirdnessToSensible (-0.0025f), startX, endX);
+	float middleX = weirdnessToWindow (0.0f, startX, endX);
+	float leftOffMiddleX = weirdnessToWindow (0.0025f, startX, endX);
+	float rightOffMiddleX = weirdnessToWindow (-0.0025f, startX, endX);
 
 	draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
 							  ImVec2 (endX, horizontalEndY), safeColour);
@@ -238,8 +227,7 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 		if (timings[i] > 0.15f)
 			continue;
 
-		float position = sensibleToWindow (weirdnessToSensible (timings[i]),
-										   startX, endX);
+		float position = weirdnessToWindow (timings[i], startX, endX);
 		ImColor colour;
 		switch (ratings[i]) {
 		case Cool:
@@ -260,8 +248,8 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 
 	ImGui::End ();
 
-	ImGui::SetNextWindowSize (ImVec2(110,160), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowPos (ImVec2(0, 0), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize (ImVec2 (110, 160), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos (ImVec2 (0, 0), ImGuiCond_FirstUseEver);
 	ImGui::Begin ("Scores", 0, 0);
 	ImGui::Text ("Cool: %d", cools);
 	ImGui::Text ("Fine: %d", fines);
