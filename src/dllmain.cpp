@@ -126,6 +126,21 @@ HOOK (hitState, __stdcall, CheckHitStateInternal, sigHitStateInternal (),
 }
 
 float
+average (float *arr, i32 size) {
+	float sum = 0.0f;
+	i32 count = 0;
+	for (i32 i = 0; i < size; i++) {
+		if (arr[i] > 0.1f)
+			continue;
+		sum += arr[i];
+		count++;
+	}
+	if (count == 0)
+		return 0.0f;
+	return sum / count;
+}
+
+float
 weirdnessToWindow (float weirdness, float min, float max) {
 	float sensible = weirdness * -1.0f;
 	sensible += 0.10;
@@ -232,8 +247,10 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 		float greenEndX = weirdnessToWindow (-0.03f, startX, endX);
 
 		float middleX = weirdnessToWindow (0.0f, startX, endX);
-		float leftOffMiddleX = weirdnessToWindow (0.0025f, startX, endX);
-		float rightOffMiddleX = weirdnessToWindow (-0.0025f, startX, endX);
+		float mean = average (timings, COUNTOFARR (timings));
+		float meanX = weirdnessToWindow (mean, startX, endX);
+		float leftOfMeanX = weirdnessToWindow (mean + 0.0025f, startX, endX);
+		float rightOMeanX = weirdnessToWindow (mean - 0.0025f, startX, endX);
 
 		draw_list->AddRectFilled (ImVec2 (startX, horizontalStartY),
 								  ImVec2 (endX, horizontalEndY), safeColour);
@@ -267,9 +284,11 @@ __declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 								ImVec2 (position, endY), colour);
 		}
 
+		draw_list->AddLine (ImVec2 (middleX, startY), ImVec2 (middleX, endY),
+							ImColor (255, 255, 255, 255));
 		draw_list->AddTriangleFilled (
-			ImVec2 (leftOffMiddleX, startY), ImVec2 (rightOffMiddleX, startY),
-			ImVec2 (middleX, horizontalStartY), ImColor (255, 255, 255, 255));
+			ImVec2 (leftOfMeanX, startY), ImVec2 (rightOMeanX, startY),
+			ImVec2 (meanX, horizontalStartY), ImColor (255, 255, 255, 255));
 	}
 
 	ImGui::End ();
