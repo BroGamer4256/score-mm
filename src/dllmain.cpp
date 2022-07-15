@@ -193,34 +193,29 @@ __declspec(dllexport) void init () {
 	}
 }
 
-__declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
-	static bool inited = false;
-	// static bool colourPickerOpen = false;
-	// static int colourPickerSelected = 0;
-	if (!inited) {
-		ID3D11Device *pDevice;
-		DXGI_SWAP_CHAIN_DESC sd;
-		chain->GetDevice (__uuidof(ID3D11Device), (void **)&pDevice);
-		chain->GetDesc (&sd);
-		pDevice->GetImmediateContext (&pContext);
-		ID3D11Texture2D *pBackBuffer;
-		chain->GetBuffer (0, __uuidof(ID3D11Texture2D),
+__declspec(dllexport) void D3DInit (IDXGISwapChain *swapChain,
+									ID3D11Device *device,
+									ID3D11DeviceContext *deviceContext) {
+	pContext = deviceContext;
+
+	DXGI_SWAP_CHAIN_DESC sd;
+	swapChain->GetDesc (&sd);
+	ID3D11Texture2D *pBackBuffer;
+	swapChain->GetBuffer (0, __uuidof(ID3D11Texture2D),
 						  (LPVOID *)&pBackBuffer);
-		pDevice->CreateRenderTargetView (pBackBuffer, NULL,
-										 &mainRenderTargetView);
-		pBackBuffer->Release ();
-		HWND window = sd.OutputWindow;
-		oWndProc = (WNDPROC)SetWindowLongPtrA (window, GWLP_WNDPROC,
-											   (LONG_PTR)WndProc);
-		ImGui::CreateContext ();
-		ImGuiIO &io = ImGui::GetIO ();
-		io.ConfigFlags = ImGuiConfigFlags_NoMouseCursorChange;
-		ImGui_ImplWin32_Init (window);
-		ImGui_ImplDX11_Init (pDevice, pContext);
+	device->CreateRenderTargetView (pBackBuffer, NULL, &mainRenderTargetView);
+	pBackBuffer->Release ();
+	HWND window = sd.OutputWindow;
+	oWndProc
+		= (WNDPROC)SetWindowLongPtrA (window, GWLP_WNDPROC, (LONG_PTR)WndProc);
+	ImGui::CreateContext ();
+	ImGuiIO &io = ImGui::GetIO ();
+	io.ConfigFlags = ImGuiConfigFlags_NoMouseCursorChange;
+	ImGui_ImplWin32_Init (window);
+	ImGui_ImplDX11_Init (device, pContext);
+}
 
-		inited = true;
-	}
-
+__declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui_ImplDX11_NewFrame ();
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();

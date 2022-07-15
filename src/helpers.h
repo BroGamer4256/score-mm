@@ -43,14 +43,26 @@ typedef uint64_t u64;
 		MH_EnableHook ((void *)where##functionName);                          \
 	}
 
-#define INSTALL_HOOK_DYNAMIC(functionName, location)                          \
+#define VTABLE_HOOK(returnType, callingConvention, className, functionName,   \
+					...)                                                      \
+	typedef returnType callingConvention className##functionName (            \
+		className *This, __VA_ARGS__);                                        \
+	className##functionName *original##className##functionName;               \
+	returnType callingConvention implOf##className##functionName (            \
+		className *This, __VA_ARGS__)
+
+#define INSTALL_VTABLE_HOOK(className, object, functionName, functionIndex)   \
 	{                                                                         \
-		where##functionName = location;                                       \
-		MH_Initialize ();                                                     \
-		MH_CreateHook ((void *)where##functionName,                           \
-					   (void *)implOf##functionName,                          \
-					   (void **)(&original##functionName));                   \
-		MH_EnableHook ((void *)where##functionName);                          \
+		void **addr = &(*(void ***)object)[functionIndex];                    \
+		if (*addr != implOf##className##functionName) {                       \
+			original##className##functionName                                 \
+				= (className##functionName *)*addr;                           \
+			DWORD oldProtect;                                                 \
+			VirtualProtect (addr, sizeof (void *), PAGE_EXECUTE_READWRITE,    \
+							&oldProtect);                                     \
+			*addr = (void *)implOf##className##functionName;                  \
+			VirtualProtect (addr, sizeof (void *), oldProtect, &oldProtect);  \
+		}                                                                     \
 	}
 
 #define READ_MEMORY(location, type) *(type *)location
