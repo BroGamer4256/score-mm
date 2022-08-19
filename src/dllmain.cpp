@@ -56,6 +56,7 @@ float timings[40];
 hitState ratings[40];
 
 float lastTiming = 0.0f;
+bool sliding = false;
 i32 cools = 0;
 i32 fines = 0;
 i32 safes = 0;
@@ -68,17 +69,18 @@ ImColor safeColour = ImColor (252, 54, 110, 184);
 ImColor fineColour = ImColor (0, 251, 55, 184);
 ImColor coolColour = ImColor (94, 241, 251, 184);
 
-HOOK (hitState, __stdcall, CheckHitState,
+HOOK (hitState, __fastcall, CheckHitState,
 	  (u64)sigHitState ()
 		  + readUnalignedU32 ((void *)((u64)sigHitState () + 1)) + 5,
 	  void *a1, bool *a2, void *a3, void *a4, i32 a5, void *a6,
 	  u32 *multiCount, u32 *a8, i32 *a9, bool *a10, bool *slide,
 	  bool *slide_chain, bool *slide_chain_start, bool *slide_chain_max,
 	  bool *slide_chain_continues) {
+	sliding = *slide;
 	hitState result = originalCheckHitState (
 		a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain,
 		slide_chain_start, slide_chain_max, slide_chain_continues);
-	if (*slide_chain_continues)
+	if (*slide_chain_continues || sliding)
 		return result;
 	switch (result) {
 	case Cool:
@@ -119,7 +121,7 @@ HOOK (hitState, __stdcall, CheckHitState,
 HOOK (hitState, __stdcall, CheckHitStateInternal, sigHitStateInternal (),
 	  void *a1, void *a2, u16 a3, u16 a4) {
 	hitState result = originalCheckHitStateInternal (a1, a2, a3, a4);
-	if (result >= Bad)
+	if (result >= Bad || sliding)
 		return result;
 	lastTiming = *(float *)((u64)a2 + 0x18) - *(float *)((u64)a1 + 0x13264);
 	return result;
