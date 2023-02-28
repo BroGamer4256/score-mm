@@ -76,7 +76,10 @@ HOOK (hitState, __fastcall, CheckHitState,
 	  u32 *multiCount, u32 *a8, i32 *a9, bool *a10, bool *slide,
 	  bool *slide_chain, bool *slide_chain_start, bool *slide_chain_max,
 	  bool *slide_chain_continues) {
-	sliding = *slide;
+	if (slide)
+		sliding = *slide;
+	else
+		sliding = true;
 	hitState result = originalCheckHitState (
 		a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain,
 		slide_chain_start, slide_chain_max, slide_chain_continues);
@@ -155,7 +158,7 @@ weirdnessToWindow (float weirdness, float min, float max) {
 #ifdef __cplusplus
 extern "C" {
 #endif
-__declspec(dllexport) void init () {
+__declspec (dllexport) void init () {
 	INSTALL_HOOK (CheckHitState);
 	INSTALL_HOOK (CheckHitStateInternal);
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
@@ -195,15 +198,15 @@ __declspec(dllexport) void init () {
 	}
 }
 
-__declspec(dllexport) void D3DInit (IDXGISwapChain *swapChain,
-									ID3D11Device *device,
-									ID3D11DeviceContext *deviceContext) {
+__declspec (dllexport) void D3DInit (IDXGISwapChain *swapChain,
+									 ID3D11Device *device,
+									 ID3D11DeviceContext *deviceContext) {
 	pContext = deviceContext;
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	swapChain->GetDesc (&sd);
 	ID3D11Texture2D *pBackBuffer;
-	swapChain->GetBuffer (0, __uuidof(ID3D11Texture2D),
+	swapChain->GetBuffer (0, __uuidof (ID3D11Texture2D),
 						  (LPVOID *)&pBackBuffer);
 	device->CreateRenderTargetView (pBackBuffer, NULL, &mainRenderTargetView);
 	pBackBuffer->Release ();
@@ -217,7 +220,7 @@ __declspec(dllexport) void D3DInit (IDXGISwapChain *swapChain,
 	ImGui_ImplDX11_Init (device, pContext);
 }
 
-__declspec(dllexport) void onFrame (IDXGISwapChain *chain) {
+__declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui_ImplDX11_NewFrame ();
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();
