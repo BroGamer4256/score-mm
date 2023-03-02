@@ -136,7 +136,6 @@ __declspec (dllexport) void init () {
 		coolColour = ImColor (r, g, b, a);
 	}
 }
-
 __declspec (dllexport) void D3DInit (IDXGISwapChain *swapChain, ID3D11Device *device, ID3D11DeviceContext *deviceContext) {
 	DXGI_SWAP_CHAIN_DESC sd;
 	ID3D11Texture2D *pBackBuffer;
@@ -168,6 +167,7 @@ __declspec (dllexport) void onResize (IDXGISwapChain *swapChain) {
 	pBackBuffer->Release ();
 }
 
+bool firstFrame = true;
 __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 	if (timings.size () > 50) timings.pop_front ();
 	ImGui_ImplDX11_NewFrame ();
@@ -177,7 +177,6 @@ __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 	ImGui::SetNextWindowSize (ImVec2 (700, 70), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos (ImVec2 (0, 0), ImGuiCond_FirstUseEver);
 	if (ImGui::Begin ("Judgement Line", 0, 0)) {
-
 		ImDrawList *draw_list = ImGui::GetWindowDrawList ();
 		ImVec2 p              = ImGui::GetCursorScreenPos ();
 		float startX          = p.x + 4.0f;
@@ -220,8 +219,12 @@ __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 		draw_list->AddLine (ImVec2 (middleX, startY), ImVec2 (middleX, endY), ImColor (255, 255, 255, 255));
 		draw_list->AddTriangleFilled (ImVec2 (leftOfMeanX, startY), ImVec2 (rightOMeanX, startY), ImVec2 (meanX, horizontalStartY), ImColor (255, 255, 255, 255));
 	}
-
 	ImGui::End ();
+
+	if (firstFrame) {
+		ImGui::SetWindowFocus (0);
+		firstFrame = false;
+	}
 
 	ImGui::EndFrame ();
 	ImGui::Render ();
