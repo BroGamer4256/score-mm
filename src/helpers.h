@@ -15,108 +15,90 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define FUNCTION_PTR(returnType, callingConvention, function, location, ...)  \
-	returnType (callingConvention *function) (__VA_ARGS__)                    \
-		= (returnType (callingConvention *) (__VA_ARGS__)) (location)
+#define FUNCTION_PTR(returnType, callingConvention, function, location, ...) returnType (callingConvention *function) (__VA_ARGS__) = (returnType (callingConvention *) (__VA_ARGS__)) (location)
 
-#define PROC_ADDRESS(libraryName, procName)                                   \
-	GetProcAddress (LoadLibrary (TEXT (libraryName)), procName)
+#define PROC_ADDRESS(libraryName, procName) GetProcAddress (LoadLibrary (TEXT (libraryName)), procName)
 
-#define HOOK(returnType, callingConvention, functionName, location, ...)      \
-	typedef returnType callingConvention (*functionName) (__VA_ARGS__);       \
-	functionName original##functionName = NULL;                               \
-	void *where##functionName = (void *)(location);                           \
+#define HOOK(returnType, callingConvention, functionName, location, ...)                                                                                                                               \
+	typedef returnType callingConvention (*functionName) (__VA_ARGS__);                                                                                                                                \
+	functionName original##functionName = NULL;                                                                                                                                                        \
+	void *where##functionName           = (void *)(location);                                                                                                                                          \
 	returnType callingConvention implOf##functionName (__VA_ARGS__)
 
-#define HOOK_DYNAMIC(returnType, callingConvention, functionName, ...)        \
-	typedef returnType callingConvention (*functionName) (__VA_ARGS__);       \
-	functionName original##functionName = NULL;                               \
-	void *where##functionName = NULL;                                         \
+#define HOOK_DYNAMIC(returnType, callingConvention, functionName, ...)                                                                                                                                 \
+	typedef returnType callingConvention (*functionName) (__VA_ARGS__);                                                                                                                                \
+	functionName original##functionName = NULL;                                                                                                                                                        \
+	void *where##functionName           = NULL;                                                                                                                                                        \
 	returnType callingConvention implOf##functionName (__VA_ARGS__)
 
-#define INSTALL_HOOK(functionName)                                            \
-	{                                                                         \
-		MH_Initialize ();                                                     \
-		MH_CreateHook ((void *)where##functionName,                           \
-					   (void *)implOf##functionName,                          \
-					   (void **)(&original##functionName));                   \
-		MH_EnableHook ((void *)where##functionName);                          \
+#define INSTALL_HOOK(functionName)                                                                                                                                                                     \
+	{                                                                                                                                                                                                  \
+		MH_Initialize ();                                                                                                                                                                              \
+		MH_CreateHook ((void *)where##functionName, (void *)implOf##functionName, (void **)(&original##functionName));                                                                                 \
+		MH_EnableHook ((void *)where##functionName);                                                                                                                                                   \
 	}
 
-#define VTABLE_HOOK(returnType, callingConvention, className, functionName,   \
-					...)                                                      \
-	typedef returnType callingConvention className##functionName (            \
-		className *This, __VA_ARGS__);                                        \
-	className##functionName *original##className##functionName;               \
-	returnType callingConvention implOf##className##functionName (            \
-		className *This, __VA_ARGS__)
+#define VTABLE_HOOK(returnType, callingConvention, className, functionName, ...)                                                                                                                       \
+	typedef returnType callingConvention className##functionName (className *This, __VA_ARGS__);                                                                                                       \
+	className##functionName *original##className##functionName;                                                                                                                                        \
+	returnType callingConvention implOf##className##functionName (className *This, __VA_ARGS__)
 
-#define INSTALL_VTABLE_HOOK(className, object, functionName, functionIndex)   \
-	{                                                                         \
-		void **addr = &(*(void ***)object)[functionIndex];                    \
-		if (*addr != implOf##className##functionName) {                       \
-			original##className##functionName                                 \
-				= (className##functionName *)*addr;                           \
-			DWORD oldProtect;                                                 \
-			VirtualProtect (addr, sizeof (void *), PAGE_EXECUTE_READWRITE,    \
-							&oldProtect);                                     \
-			*addr = (void *)implOf##className##functionName;                  \
-			VirtualProtect (addr, sizeof (void *), oldProtect, &oldProtect);  \
-		}                                                                     \
+#define INSTALL_VTABLE_HOOK(className, object, functionName, functionIndex)                                                                                                                            \
+	{                                                                                                                                                                                                  \
+		void **addr = &(*(void ***)object)[functionIndex];                                                                                                                                             \
+		if (*addr != implOf##className##functionName) {                                                                                                                                                \
+			original##className##functionName = (className##functionName *)*addr;                                                                                                                      \
+			DWORD oldProtect;                                                                                                                                                                          \
+			VirtualProtect (addr, sizeof (void *), PAGE_EXECUTE_READWRITE, &oldProtect);                                                                                                               \
+			*addr = (void *)implOf##className##functionName;                                                                                                                                           \
+			VirtualProtect (addr, sizeof (void *), oldProtect, &oldProtect);                                                                                                                           \
+		}                                                                                                                                                                                              \
 	}
 
 #define READ_MEMORY(location, type) *(type *)location
 
-#define WRITE_MEMORY(location, type, ...)                                     \
-	{                                                                         \
-		const type data[] = { __VA_ARGS__ };                                  \
-		DWORD oldProtect;                                                     \
-		VirtualProtect ((void *)(location), sizeof (data),                    \
-						PAGE_EXECUTE_READWRITE, &oldProtect);                 \
-		memcpy ((void *)(location), data, sizeof (data));                     \
-		VirtualProtect ((void *)(location), sizeof (data), oldProtect,        \
-						&oldProtect);                                         \
+#define WRITE_MEMORY(location, type, ...)                                                                                                                                                              \
+	{                                                                                                                                                                                                  \
+		const type data[] = {__VA_ARGS__};                                                                                                                                                             \
+		DWORD oldProtect;                                                                                                                                                                              \
+		VirtualProtect ((void *)(location), sizeof (data), PAGE_EXECUTE_READWRITE, &oldProtect);                                                                                                       \
+		memcpy ((void *)(location), data, sizeof (data));                                                                                                                                              \
+		VirtualProtect ((void *)(location), sizeof (data), oldProtect, &oldProtect);                                                                                                                   \
 	}
 
-#define WRITE_MEMORY_STRING(location, data, length)                           \
-	{                                                                         \
-		DWORD oldProtect;                                                     \
-		VirtualProtect ((void *)(location), length, PAGE_EXECUTE_READWRITE,   \
-						&oldProtect);                                         \
-		memcpy ((void *)(location), data, length);                            \
-		VirtualProtect ((void *)(location), length, oldProtect, &oldProtect); \
+#define WRITE_MEMORY_STRING(location, data, length)                                                                                                                                                    \
+	{                                                                                                                                                                                                  \
+		DWORD oldProtect;                                                                                                                                                                              \
+		VirtualProtect ((void *)(location), length, PAGE_EXECUTE_READWRITE, &oldProtect);                                                                                                              \
+		memcpy ((void *)(location), data, length);                                                                                                                                                     \
+		VirtualProtect ((void *)(location), length, oldProtect, &oldProtect);                                                                                                                          \
 	}
 
-#define WRITE_NOP(location, count)                                            \
-	{                                                                         \
-		DWORD oldProtect;                                                     \
-		VirtualProtect ((void *)(location), (size_t)(count),                  \
-						PAGE_EXECUTE_READWRITE, &oldProtect);                 \
-		for (size_t i = 0; i < (size_t)(count); i++)                          \
-			*((uint8_t *)(location) + i) = 0x90;                              \
-		VirtualProtect ((void *)(location), (size_t)(count), oldProtect,      \
-						&oldProtect);                                         \
+#define WRITE_NOP(location, count)                                                                                                                                                                     \
+	{                                                                                                                                                                                                  \
+		DWORD oldProtect;                                                                                                                                                                              \
+		VirtualProtect ((void *)(location), (size_t)(count), PAGE_EXECUTE_READWRITE, &oldProtect);                                                                                                     \
+		for (size_t i = 0; i < (size_t)(count); i++)                                                                                                                                                   \
+			*((uint8_t *)(location) + i) = 0x90;                                                                                                                                                       \
+		VirtualProtect ((void *)(location), (size_t)(count), oldProtect, &oldProtect);                                                                                                                 \
 	}
 
-#define WRITE_NULL(location, count)                                           \
-	{                                                                         \
-		DWORD oldProtect;                                                     \
-		VirtualProtect ((void *)(location), (size_t)(count),                  \
-						PAGE_EXECUTE_READWRITE, &oldProtect);                 \
-		for (size_t i = 0; i < (size_t)(count); i++)                          \
-			*((uint8_t *)(location) + i) = 0x00;                              \
-		VirtualProtect ((void *)(location), (size_t)(count), oldProtect,      \
-						&oldProtect);                                         \
+#define WRITE_NULL(location, count)                                                                                                                                                                    \
+	{                                                                                                                                                                                                  \
+		DWORD oldProtect;                                                                                                                                                                              \
+		VirtualProtect ((void *)(location), (size_t)(count), PAGE_EXECUTE_READWRITE, &oldProtect);                                                                                                     \
+		for (size_t i = 0; i < (size_t)(count); i++)                                                                                                                                                   \
+			*((uint8_t *)(location) + i) = 0x00;                                                                                                                                                       \
+		VirtualProtect ((void *)(location), (size_t)(count), oldProtect, &oldProtect);                                                                                                                 \
 	}
 
 #define COUNTOFARR(arr) sizeof (arr) / sizeof (arr[0])
-#define AVERAGE(a, b) (((a) + (b)) / 2)
+#define AVERAGE(a, b)   (((a) + (b)) / 2)
 
-#define WARNING_COLOUR (FOREGROUND_RED | FOREGROUND_GREEN)
-#define ERROR_COLOUR FOREGROUND_RED
-#define printWarning(format, ...)                                             \
-	printColour (WARNING_COLOUR, format, __VA_ARGS__)
-#define printError(format, ...) printColour (ERROR_COLOUR, format, __VA_ARGS__)
+#define WARNING_COLOUR            (FOREGROUND_RED | FOREGROUND_GREEN)
+#define ERROR_COLOUR              FOREGROUND_RED
+#define printWarning(format, ...) printColour (WARNING_COLOUR, format, __VA_ARGS__)
+#define printError(format, ...)   printColour (ERROR_COLOUR, format, __VA_ARGS__)
 
 toml_table_t *openConfig (char *configFilePath);
 toml_table_t *openConfigSection (toml_table_t *config, char *sectionName);

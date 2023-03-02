@@ -36,8 +36,7 @@ openConfigSection (toml_table_t *config, char *sectionName) {
 bool
 readConfigBool (toml_table_t *table, char *key, bool notFoundValue) {
 	toml_datum_t data = toml_bool_in (table, key);
-	if (!data.ok)
-		return notFoundValue;
+	if (!data.ok) return notFoundValue;
 
 	return (bool)data.u.b;
 }
@@ -45,8 +44,7 @@ readConfigBool (toml_table_t *table, char *key, bool notFoundValue) {
 int64_t
 readConfigInt (toml_table_t *table, char *key, int64_t notFoundValue) {
 	toml_datum_t data = toml_int_in (table, key);
-	if (!data.ok)
-		return notFoundValue;
+	if (!data.ok) return notFoundValue;
 
 	return data.u.i;
 }
@@ -54,8 +52,7 @@ readConfigInt (toml_table_t *table, char *key, int64_t notFoundValue) {
 char *
 readConfigString (toml_table_t *table, char *key, char *notFoundValue) {
 	toml_datum_t data = toml_string_in (table, key);
-	if (!data.ok)
-		return notFoundValue;
+	if (!data.ok) return notFoundValue;
 
 	return data.u.s;
 }
@@ -65,15 +62,13 @@ printColour (int colour, const char *format, ...) {
 	va_list args;
 	va_start (args, format);
 
-	if (consoleHandle == 0)
-		consoleHandle = GetStdHandle (STD_OUTPUT_HANDLE);
+	if (consoleHandle == 0) consoleHandle = GetStdHandle (STD_OUTPUT_HANDLE);
 
 	char buffer[255];
 	vsprintf (buffer, format, args);
 	SetConsoleTextAttribute (consoleHandle, colour);
 	printf ("%s", buffer);
-	SetConsoleTextAttribute (consoleHandle, FOREGROUND_BLUE | FOREGROUND_GREEN
-												| FOREGROUND_RED);
+	SetConsoleTextAttribute (consoleHandle, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED);
 
 	va_end (args);
 }
