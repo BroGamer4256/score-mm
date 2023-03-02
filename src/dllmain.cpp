@@ -7,8 +7,8 @@
 #include <imgui_impl_win32.h>
 #include <iostream>
 
-SIG_SCAN (sigHitState, 0x14026BC3C, "\xE8\x00\x00\x00\x00\x48\x8B\x4D\xE8\x89\x01", "x????xxxxxx");
-SIG_SCAN (sigHitStateInternal, 0x14026D3D0, "\x66\x44\x89\x4C\x24\x00\x53", "xxxxx?x");
+SIG_SCAN (sigHitState, 0x14026BB4C, "\xE8\x00\x00\x00\x00\x48\x8B\x4D\xE8\x89\x01", "x????xxxxxx");
+SIG_SCAN (sigHitStateInternal, 0x14026D2E0, "\x66\x44\x89\x4C\x24\x00\x53", "xxxxx?x");
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -46,8 +46,8 @@ typedef enum : i32 {
 	NA          = 21,
 } hitState;
 
-float timings[40];
-hitState ratings[40];
+float timings[64];
+hitState ratings[64];
 
 float lastTiming = 0.0f;
 bool sliding     = false;
@@ -108,6 +108,7 @@ extern "C" {
 __declspec (dllexport) void init () {
 	INSTALL_HOOK (CheckHitState);
 	INSTALL_HOOK (CheckHitStateInternal);
+
 	for (int i = 0; i < COUNTOFARR (timings); i++) {
 		timings[i] = 1.0f;
 		ratings[i] = NA;
