@@ -2,7 +2,7 @@ enabled = true
 dll = ["score.dll"]
 
 name = "Judgement Line"
-version = "1.00"
+version = "1.04"
 date = 1970-01-01
 author = "BroGamer"
 
