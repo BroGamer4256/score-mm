@@ -165,7 +165,7 @@ __declspec (dllexport) void D3DInit (IDXGISwapChain *swapChain, ID3D11Device *de
 	ImGui_ImplDX11_Init (device, pContext);
 }
 
-__declspec (dllexport) void D3DResize (IDXGISwapChain *swapChain) {
+__declspec (dllexport) void onResize (IDXGISwapChain *swapChain) {
 	ID3D11Texture2D *pBackBuffer;
 	ID3D11Device *device;
 
