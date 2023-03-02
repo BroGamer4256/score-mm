@@ -1,6 +1,7 @@
 #include "SigScan.h"
 #include "helpers.h"
 #include <d3d11.h>
+#include <deque>
 #include <dxgi.h>
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -46,29 +47,24 @@ typedef enum : i32 {
 	NA          = 21,
 } hitState;
 
-float timings[64];
-hitState ratings[64];
+std::deque<std::pair<float, hitState>> timings;
 
 float lastTiming = 0.0f;
 bool sliding     = false;
-i32 timingIndex  = 0;
 
 ImColor safeColour = ImColor (252, 54, 110, 184);
 ImColor fineColour = ImColor (0, 251, 55, 184);
 ImColor coolColour = ImColor (94, 241, 251, 184);
 
 HOOK (hitState, __fastcall, CheckHitState, (u64)sigHitState () + readUnalignedU32 ((void *)((u64)sigHitState () + 1)) + 5, void *a1, bool *a2, void *a3, void *a4, i32 a5, void *a6, u32 *multiCount,
-      u32 *a8, i32 *a9, bool *a10, bool *slide, bool *slide_chain, bool *slide_chain_start, bool *slide_chain_max, bool *slide_chain_continues) {
+      u32 *a8, i32 *a9, bool *a10, bool *slide, bool *slide_chain, bool *slide_chain_start, bool *slide_chain_max, bool *slide_chain_continues, void *a16) {
 	if (slide) sliding = *slide;
 	else sliding = true;
-	hitState result = originalCheckHitState (a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues);
+	hitState result = originalCheckHitState (a1, a2, a3, a4, a5, a6, multiCount, a8, a9, a10, slide, slide_chain, slide_chain_start, slide_chain_max, slide_chain_continues, a16);
 	if (*slide_chain_continues || sliding) return result;
 	if (result >= Bad) return result;
 
-	timings[timingIndex] = lastTiming;
-	ratings[timingIndex] = result;
-	timingIndex++;
-	if (timingIndex >= COUNTOFARR (timings) - 1) timingIndex = 0;
+	timings.push_back (std::pair (lastTiming, result));
 	return result;
 }
 
@@ -80,12 +76,12 @@ HOOK (hitState, __stdcall, CheckHitStateInternal, sigHitStateInternal (), void *
 }
 
 float
-average (float *arr, i32 size) {
+average (std::deque<std::pair<float, hitState>> arr) {
 	float sum = 0.0f;
 	i32 count = 0;
-	for (i32 i = 0; i < size; i++) {
-		if (arr[i] > 0.1f) continue;
-		sum += arr[i];
+	for (auto elem : arr) {
+		if (elem.first > 0.1f) continue;
+		sum += elem.first;
 		count++;
 	}
 	if (count == 0) return 0.0f;
@@ -108,11 +104,6 @@ extern "C" {
 __declspec (dllexport) void init () {
 	INSTALL_HOOK (CheckHitState);
 	INSTALL_HOOK (CheckHitStateInternal);
-
-	for (int i = 0; i < COUNTOFARR (timings); i++) {
-		timings[i] = 1.0f;
-		ratings[i] = NA;
-	}
 
 	toml_table_t *config = openConfig ((char *)"config.toml");
 	if (!config) return;
@@ -178,6 +169,7 @@ __declspec (dllexport) void onResize (IDXGISwapChain *swapChain) {
 }
 
 __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
+	if (timings.size () > 50) timings.pop_front ();
 	ImGui_ImplDX11_NewFrame ();
 	ImGui_ImplWin32_NewFrame ();
 	ImGui::NewFrame ();
@@ -204,7 +196,7 @@ __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 		float greenEndX   = weirdnessToWindow (-0.03f, startX, endX);
 
 		float middleX     = weirdnessToWindow (0.0f, startX, endX);
-		float mean        = average (timings, COUNTOFARR (timings));
+		float mean        = average (timings);
 		float meanX       = weirdnessToWindow (mean, startX, endX);
 		float leftOfMeanX = weirdnessToWindow (mean + 0.0025f, startX, endX);
 		float rightOMeanX = weirdnessToWindow (mean - 0.0025f, startX, endX);
@@ -213,12 +205,10 @@ __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 		draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY), ImVec2 (blueEndX, horizontalEndY), fineColour);
 		draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY), ImVec2 (greenEndX, horizontalEndY), coolColour);
 
-		for (int i = 0; i < COUNTOFARR (timings); i++) {
-			if (timings[i] > 0.15f) continue;
-
-			float position = weirdnessToWindow (timings[i], startX, endX);
+		for (auto elem : timings) {
+			float position = weirdnessToWindow (elem.first, startX, endX);
 			ImColor colour;
-			switch (ratings[i]) {
+			switch (elem.second) {
 			case Cool: colour = coolColour; break;
 			case Fine: colour = fineColour; break;
 			case Safe: colour = safeColour; break;
