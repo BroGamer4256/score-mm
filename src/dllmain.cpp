@@ -6,7 +6,6 @@
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
-#include <iostream>
 
 SIG_SCAN (sigHitState, 0x14026BB4C, "\xE8\x00\x00\x00\x00\x48\x8B\x4D\xE8\x89\x01", "x????xxxxxx");
 SIG_SCAN (sigHitStateInternal, 0x14026D2E0, "\x66\x44\x89\x4C\x24\x00\x53", "xxxxx?x");
@@ -79,9 +78,9 @@ float
 average (std::deque<std::pair<float, hitState>> arr) {
 	float sum = 0.0f;
 	i32 count = 0;
-	for (auto elem : arr) {
-		if (elem.first > 0.1f) continue;
-		sum += elem.first;
+	for (auto [time, state] : arr) {
+		if (time > 0.1f) continue;
+		sum += time;
 		count++;
 	}
 	if (count == 0) return 0.0f;
@@ -136,6 +135,7 @@ __declspec (dllexport) void init () {
 		coolColour = ImColor (r, g, b, a);
 	}
 }
+
 __declspec (dllexport) void D3DInit (IDXGISwapChain *swapChain, ID3D11Device *device, ID3D11DeviceContext *deviceContext) {
 	DXGI_SWAP_CHAIN_DESC sd;
 	ID3D11Texture2D *pBackBuffer;
@@ -204,10 +204,10 @@ __declspec (dllexport) void onFrame (IDXGISwapChain *chain) {
 		draw_list->AddRectFilled (ImVec2 (blueStartX, horizontalStartY), ImVec2 (blueEndX, horizontalEndY), fineColour);
 		draw_list->AddRectFilled (ImVec2 (greenStartX, horizontalStartY), ImVec2 (greenEndX, horizontalEndY), coolColour);
 
-		for (auto elem : timings) {
-			float position = weirdnessToWindow (elem.first, startX, endX);
+		for (auto [time, state] : timings) {
+			float position = weirdnessToWindow (time, startX, endX);
 			ImColor colour;
-			switch (elem.second) {
+			switch (state) {
 			case Cool: colour = coolColour; break;
 			case Fine: colour = fineColour; break;
 			case Safe: colour = safeColour; break;
